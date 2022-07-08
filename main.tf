@@ -118,16 +118,14 @@ module "eks" {
   }
 
   self_managed_node_groups = {
+    min_size     = 1
+    max_size     = 3
+    desired_size = 2
     spot = {
       instance_type = "m5.large"
       instance_market_options = {
         market_type = "spot"
       }
-
-      pre_bootstrap_user_data = <<-EOT
-        echo "foo"
-        export FOO=bar
-        EOT
 
       bootstrap_extra_args = "--kubelet-extra-args '--node-labels=node.kubernetes.io/lifecycle=spot'"
 
@@ -235,6 +233,15 @@ resource "aws_prometheus_workspace" "demo" {
   alias = "${local.name}-prometheus"
 }
 
+resource "helm_release" "metrics_server" {
+  name             = "${local.name}-metrics"
+  repository       = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart            = "metrics-server"
+  namespace        = "${var.k8s_namespace}-metrics-server"
+  create_namespace = true
+  version          = "3.8.2"
+}
+
 resource "helm_release" "prometheus" {
   name             = "${local.name}-prometheus"
   repository       = "https://prometheus-community.github.io/helm-charts"
@@ -296,6 +303,20 @@ serviceAccount:
 grafana.ini:
   auth:
     sigv4_auth_enabled: true
+persistence:
+  enabled: true
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: ${aws_prometheus_workspace.demo.prometheus_endpoint}
+      jsonData:
+        sigV4Auth: true
+        sigV4AuthType: default
+        sigV4Region: ${var.region}
+      isDefault: true
 EOT
   ]
 }
