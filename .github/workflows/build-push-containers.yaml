@@ -26,15 +26,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
+      - name: Extract metadata (tags, labels) for load generation image
+        id: load-meta
         uses: docker/metadata-action@v4.0.1
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/observability-demo-load
+
+      - name: Build and push load Docker images
+        uses: docker/build-push-action@v3.0.0
+        with:
+          push: true
+          context: "./src/load_generation"
+          tags: ${{ steps.load-meta.outputs.tags }}
+          labels: ${{ steps.load-meta.outputs.labels }}
+
+      - name: Extract metadata (tags, labels) for server image
+        id: server-meta
+        uses: docker/metadata-action@v4.0.1
+        with:
+          images: ${{ env.REGISTRY }}/observability-demo-server
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v3.0.0
         with:
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          context: "./src/server"
+          tags: ${{ steps.server-meta.outputs.tags }}
+          labels: ${{ steps.server-meta.outputs.labels }}
