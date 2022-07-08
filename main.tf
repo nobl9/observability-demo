@@ -1,0 +1,301 @@
+/**
+ * # Observability Demo
+ *
+ * This module creates an Amazon Managed Service for Prometheus workspace, as well as a Kubernetes cluster with Prometheus and Grafana to
+ * demo generating telemetry data, and putting that data into Amazon Managed Service for Prometheus.  This data can then be visualized using
+ * Grafana.
+ *
+ * ## Prerequisites
+ *
+ * This module requires the [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+ *
+ * ## Usage
+ *
+ * To create the resources, run `terraform apply`. Refer to the [documenation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) for more information on configuring the AWS provider.
+ *
+ * Once the resources are created, follow the [documenation](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html) on
+ * creating a kubeconfig file in order to connect to the cluster. Once that is created, you can connect to the Prometheus server by
+ * forwarding the port to your local:
+ *
+ * ```bash
+ * export POD_NAME=$(kubectl get pods --namespace observability-demo-prometheus -l "app=prometheus,component=server" -o jsonpath="{.items[0].metadata.name}")
+ * kubectl --namespace observability-demo-prometheus port-forward $POD_NAME 9090
+ * ```
+ *
+ * Open up `https://localhost:9090` in a browser to access the Prometheus server.
+ *
+ * To access the Grafana server, first get the password:
+ *
+ * ```bash
+ * kubectl get secret --namespace observability-demo-grafana observability-demo-complete-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+ * ```
+ *
+ * Then forward the port to your local:
+ *
+ * ```bash
+ * export POD_NAME=$(kubectl get pods --namespace observability-demo-grafana -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=observability-demo-complete-grafana" -o jsonpath="{.items[0].metadata.name}")
+ * kubectl --namespace observability-demo-grafana port-forward $POD_NAME 3000
+ * ```
+ *
+ * Opening up `https://localhost:3030` will bring up the Grafana login page. Log in with `admin` and the password from the previous step.
+ */
+locals {
+  name = "observability-demo-${replace(basename(path.cwd), "_", "-")}"
+
+  tags = {
+    Name  = local.name
+    Owner = "terraform"
+  }
+
+  # the primary cidr block for this
+  cidr_block  = "10.0.0.0/16"
+  cidr_blocks = [for cidr_block in cidrsubnets(local.cidr_block, 4, 4, 4) : cidrsubnets(cidr_block, 4, 4, 4)]
+
+  prom_service_account_name = "amazon-managed-service-prometheus"
+}
+
+data "aws_caller_identity" "current" {}
+
+module "eks" {
+  source          = "terraform-aws-modules/eks/aws"
+  version         = "18.26.3"
+  cluster_version = "1.22"
+
+  cluster_name                    = local.name
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = true
+
+  # Encryption key
+  create_kms_key = true
+  cluster_encryption_config = [{
+    resources = ["secrets"]
+  }]
+  kms_key_deletion_window_in_days = 7
+  enable_kms_key_rotation         = true
+
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnets
+  control_plane_subnet_ids = module.vpc.intra_subnets
+
+  # Extend cluster security group rules
+  cluster_security_group_additional_rules = {
+    egress_nodes_ephemeral_ports_tcp = {
+      description                = "To node 1025-65535"
+      protocol                   = "tcp"
+      from_port                  = 1025
+      to_port                    = 65535
+      type                       = "egress"
+      source_node_security_group = true
+    }
+  }
+
+  # Extend node-to-node security group rules
+  node_security_group_ntp_ipv4_cidr_block = ["169.254.169.123/32"]
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node all ports/protocols"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+    egress_all = {
+      description      = "Node all egress"
+      protocol         = "-1"
+      from_port        = 0
+      to_port          = 0
+      type             = "egress"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = ["::/0"]
+    }
+  }
+  #
+  # Self Managed Node Group(s)
+  self_managed_node_group_defaults = {
+    vpc_security_group_ids       = [aws_security_group.additional.id]
+    iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
+  }
+
+  self_managed_node_groups = {
+    spot = {
+      instance_type = "m5.large"
+      instance_market_options = {
+        market_type = "spot"
+      }
+
+      pre_bootstrap_user_data = <<-EOT
+        echo "foo"
+        export FOO=bar
+        EOT
+
+      bootstrap_extra_args = "--kubelet-extra-args '--node-labels=node.kubernetes.io/lifecycle=spot'"
+
+      post_bootstrap_user_data = <<-EOT
+        cd /tmp
+        sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+        sudo systemctl enable amazon-ssm-agent
+        sudo systemctl start amazon-ssm-agent
+        EOT
+    }
+  }
+
+  # aws-auth configmap
+  create_aws_auth_configmap = true
+  manage_aws_auth_configmap = true
+
+  aws_auth_users = [
+    {
+      userarn  = data.aws_caller_identity.current.arn,
+      username = data.aws_caller_identity.current.user_id,
+      groups   = ["system:masters"]
+    }
+  ]
+
+  aws_auth_accounts = [
+    data.aws_caller_identity.current.id
+  ]
+
+  tags = local.tags
+}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 3.0"
+
+  name = local.name
+  cidr = local.cidr_block
+
+  azs             = ["${var.region}a", "${var.region}b", "${var.region}c"]
+  private_subnets = local.cidr_blocks.0
+  public_subnets  = local.cidr_blocks.1
+  intra_subnets   = local.cidr_blocks.2
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+
+  enable_flow_log                      = true
+  create_flow_log_cloudwatch_iam_role  = true
+  create_flow_log_cloudwatch_log_group = true
+
+  public_subnet_tags = {
+    "kubernetes.io/cluster/${local.name}" = "shared"
+    "kubernetes.io/role/elb"              = 1
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/cluster/${local.name}" = "shared"
+    "kubernetes.io/role/internal-elb"     = 1
+  }
+
+  tags = local.tags
+}
+
+resource "aws_security_group" "additional" {
+  description = "additional security group"
+  name_prefix = "${local.name}-additional"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port = 22
+    to_port   = 22
+    protocol  = "tcp"
+    cidr_blocks = [
+      "10.0.0.0/8",
+      "172.16.0.0/12",
+      "192.168.0.0/16",
+    ]
+  }
+
+  tags = local.tags
+}
+
+module "amazon_managed_service_prometheus_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.2.0"
+
+  role_name                                       = local.prom_service_account_name
+  attach_amazon_managed_service_prometheus_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn = module.eks.oidc_provider_arn
+      namespace_service_accounts = [
+        "${var.k8s_namespace}-prometheus:${local.prom_service_account_name}",
+        "${var.k8s_namespace}-grafana:${local.prom_service_account_name}"
+      ]
+    }
+  }
+
+  tags = local.tags
+}
+
+resource "aws_prometheus_workspace" "demo" {
+  alias = "${local.name}-prometheus"
+}
+
+resource "helm_release" "prometheus" {
+  name             = "${local.name}-prometheus"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "prometheus"
+  namespace        = "${var.k8s_namespace}-prometheus"
+  create_namespace = true
+  version          = "15.9.0"
+
+  lint = true
+
+  values = [
+    <<-EOT
+serviceAccounts:
+  server:
+    name: ${module.amazon_managed_service_prometheus_irsa_role.iam_role_name}
+    annotations:
+      eks.amazonaws.com/role-arn: ${module.amazon_managed_service_prometheus_irsa_role.iam_role_arn}
+  alertmanager:
+    create: false
+  pushgateway:
+    create: false
+server:
+  statefulSet:
+    enabled: true
+  remoteWrite:
+    - url: "${aws_prometheus_workspace.demo.prometheus_endpoint}api/v1/remote_write"
+      sigv4:
+        region: ${var.region}
+      queue_config:
+        max_samples_per_send: 1000
+        max_shards: 200
+        capacity: 2500
+nodeExporter:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9100"
+alertmanager:
+  enabled: false
+pushgateway:
+  enabled: false
+EOT
+  ]
+}
+
+resource "helm_release" "grafana" {
+  name             = "${local.name}-grafana"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "grafana"
+  namespace        = "${var.k8s_namespace}-grafana"
+  create_namespace = true
+  version          = "6.32.2"
+
+  values = [
+    <<-EOT
+serviceAccount:
+    name: ${module.amazon_managed_service_prometheus_irsa_role.iam_role_name}
+    annotations:
+      eks.amazonaws.com/role-arn: ${module.amazon_managed_service_prometheus_irsa_role.iam_role_arn}
+grafana.ini:
+  auth:
+    sigv4_auth_enabled: true
+EOT
+  ]
+}
