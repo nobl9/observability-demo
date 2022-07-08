@@ -40,7 +40,7 @@
  * Opening up `https://localhost:3030` will bring up the Grafana login page. Log in with `admin` and the password from the previous step.
  */
 locals {
-  name = "observability-demo-${replace(basename(path.cwd), "_", "-")}"
+  name = var.name == "" ? "observability-demo-${replace(basename(path.cwd), "_", "-")}" : var.name
 
   tags = {
     Name  = local.name

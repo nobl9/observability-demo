@@ -4,6 +4,12 @@ variable "region" {
   default     = "us-west-2"
 }
 
+variable "name" {
+  description = "The name for this project"
+  type        = string
+  default     = ""
+}
+
 variable "k8s_namespace" {
   description = "The kubernetes namespace to use"
   type        = string
