@@ -380,16 +380,6 @@ resource "kubernetes_deployment" "load" {
               memory = "1Gi"
             }
           }
-
-          liveness_probe {
-            http_get {
-              path = "/good"
-              port = 8080
-            }
-
-            initial_delay_seconds = 3
-            period_seconds        = 3
-          }
         }
       }
     }

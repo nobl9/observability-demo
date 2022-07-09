@@ -35,7 +35,10 @@ func main() {
 	// Happy path. Fast and returns successfully
 	goodHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello from example application."))
+		_, err := w.Write([]byte("Hello from example application."))
+		if err != nil {
+			log.Printf("Write failed: %v", err)
+		}
 	})
 
 	// Small delay but successful
@@ -43,7 +46,10 @@ func main() {
 		delay := getDelay(100, 300)
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello from example application."))
+		_, err := w.Write([]byte("Hello from example application."))
+		if err != nil {
+			log.Printf("Write failed: %v", err)
+		}
 	})
 
 	// Significant delay, but successful
@@ -51,7 +57,10 @@ func main() {
 		delay := getDelay(500, 800)
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello from example application."))
+		_, err := w.Write([]byte("Hello from example application."))
+		if err != nil {
+			log.Printf("Write failed: %v", err)
+		}
 	})
 
 	// After a reasonable delay returns a successful response ~90% of the time.
