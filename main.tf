@@ -282,6 +282,14 @@ alertmanager:
   enabled: false
 pushgateway:
   enabled: false
+extraScrapeConfigs: |
+  - job_name: prometheus-amp
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scheme: http
+    static_configs:
+      - targets:
+        - ${local.name}-server.${var.k8s_namespace}-server.svc.cluster.local:8080
 EOT
   ]
 }
@@ -319,4 +327,152 @@ datasources:
       isDefault: true
 EOT
   ]
+}
+
+resource "kubernetes_namespace" "load" {
+  metadata {
+    name = "${var.k8s_namespace}-load-generation"
+  }
+}
+
+resource "kubernetes_deployment" "load" {
+  metadata {
+    name      = "${local.name}-load-generation"
+    namespace = "${var.k8s_namespace}-load-generation"
+    labels = {
+      app = "LoadGeneration"
+    }
+  }
+
+  spec {
+    replicas = 3
+
+    selector {
+      match_labels = {
+        app = "LoadGeneration"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "LoadGeneration"
+        }
+      }
+
+      spec {
+        container {
+          image = "ghcr.io/nobl9/observability_demo_load:main"
+          name  = "load"
+
+          env {
+            name  = "HOST"
+            value = "http://${local.name}-server.${var.k8s_namespace}-server.svc.cluster.local:8080"
+          }
+
+          resources {
+            limits = {
+              cpu    = "0.5"
+              memory = "1Gi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "1Gi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/good"
+              port = 8080
+            }
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
+        }
+      }
+    }
+  }
+  depends_on = [kubernetes_namespace.load]
+}
+
+resource "kubernetes_namespace" "server" {
+  metadata {
+    name = "${var.k8s_namespace}-server"
+  }
+}
+
+resource "kubernetes_deployment" "server" {
+  metadata {
+    name      = "${local.name}-server"
+    namespace = "${var.k8s_namespace}-server"
+    labels = {
+      app = "Server"
+    }
+  }
+
+  spec {
+    replicas = 3
+
+    selector {
+      match_labels = {
+        app = "Server"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "Server"
+        }
+      }
+
+      spec {
+        container {
+          image = "ghcr.io/nobl9/observability_demo_server:main"
+          name  = "server"
+
+          resources {
+            limits = {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/good"
+              port = 8080
+            }
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
+        }
+      }
+    }
+  }
+  depends_on = [kubernetes_namespace.server]
+}
+
+resource "kubernetes_service" "server" {
+  metadata {
+    name      = "${local.name}-server"
+    namespace = kubernetes_deployment.server.metadata.0.namespace
+  }
+  spec {
+    selector = {
+      app = kubernetes_deployment.server.metadata.0.labels.app
+    }
+    port {
+      port        = 8080
+      target_port = 8080
+    }
+  }
+  depends_on = [kubernetes_namespace.server]
 }
