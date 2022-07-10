@@ -3,7 +3,7 @@ from locust import HttpUser, task, between
 from locust import LoadTestShape
 
 class StandardUser(HttpUser):
-    wait_time = between(0.5,60)
+    wait_time = between(0.5,2)
 
     @task(5)
     def good(self):
