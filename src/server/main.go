@@ -24,7 +24,8 @@ var (
 
 func getDelay(min int, max int) time.Duration {
 	rand.Seed(time.Now().UnixNano())
-	return time.Duration(rand.Intn(max - min + 1))
+	r := rand.Intn(max-min+1) + min
+	return time.Duration(time.Duration(r) * time.Millisecond)
 }
 
 func main() {
@@ -44,7 +45,7 @@ func main() {
 	// Small delay but successful
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		delay := getDelay(100, 300)
-		time.Sleep(time.Duration(delay) * time.Millisecond)
+		time.Sleep(delay)
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte("Hello from example application."))
 		if err != nil {
@@ -54,8 +55,8 @@ func main() {
 
 	// Significant delay, but successful
 	verySlowHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		delay := getDelay(500, 800)
-		time.Sleep(time.Duration(delay) * time.Millisecond)
+		delay := getDelay(800, 2000)
+		time.Sleep(delay)
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte("Hello from example application."))
 		if err != nil {
@@ -66,8 +67,8 @@ func main() {
 	// After a reasonable delay returns a successful response ~90% of the time.
 	// Otherwise, returns an error response (500)
 	acceptableHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		delay := getDelay(200, 300)
-		time.Sleep(time.Duration(delay) * time.Millisecond)
+		delay := getDelay(200, 500)
+		time.Sleep(delay)
 
 		// roll the dice and see if we return an error
 		rand.Seed(time.Now().UnixNano())
@@ -89,15 +90,14 @@ func main() {
 	// Small delay, and returns 500
 	errorHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		delay := getDelay(200, 400)
-		time.Sleep(time.Duration(delay) * time.Millisecond)
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(delay)
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
 	// Significant delay, and returns 500
 	badHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		delay := getDelay(500, 800)
-		time.Sleep(time.Duration(delay) * time.Millisecond)
+		delay := getDelay(500, 2000)
+		time.Sleep(delay)
 		w.WriteHeader(http.StatusOK)
 	})
 

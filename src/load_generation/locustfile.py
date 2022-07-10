@@ -3,13 +3,13 @@ from locust import HttpUser, task, between
 from locust import LoadTestShape
 
 class StandardUser(HttpUser):
-    wait_time = between(1,5)
+    wait_time = between(0.5,60)
 
-    @task(10)
+    @task(5)
     def good(self):
         self.client.get("/good")
 
-    @task(5)
+    @task(2)
     def ok(self):
         self.client.get("/ok")
 
@@ -35,7 +35,7 @@ class StandardUser(HttpUser):
 
 class DoubleWave(LoadTestShape):
     """
-    A shape to imitate some specific user behaviour. In this example, midday
+    A shape to imitate some specific user behavior. In this example, midday
     and evening meal times. First peak of users appear at time_limit/3 and
     second peak appears at 2*time_limit/3
     Settings:

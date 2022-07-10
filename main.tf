@@ -362,8 +362,9 @@ resource "kubernetes_deployment" "load" {
 
       spec {
         container {
-          image = "ghcr.io/nobl9/observability_demo_load:main"
-          name  = "load"
+          image             = "ghcr.io/nobl9/observability_demo_load:main"
+          name              = "load"
+          image_pull_policy = "Always"
 
           env {
             name  = "HOST"
