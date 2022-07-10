@@ -45,9 +45,9 @@ class DoubleWave(LoadTestShape):
         time_limit -- total length of test
     """
 
-    min_users = 20
-    peak_one_users = 500
-    peak_two_users = 300
+    min_users = 500
+    peak_one_users = 4000
+    peak_two_users = 2000
     time_limit = 600
 
     def tick(self):

@@ -266,6 +266,8 @@ serviceAccounts:
 server:
   statefulSet:
     enabled: true
+    persistentVolume:
+      enabled: true
   remoteWrite:
     - url: "${aws_prometheus_workspace.demo.prometheus_endpoint}api/v1/remote_write"
       sigv4:
@@ -274,6 +276,14 @@ server:
         max_samples_per_send: 1000
         max_shards: 200
         capacity: 2500
+prometheusSpec:
+  storageSpec:
+    volumeClaimTemplate:
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
 nodeExporter:
   podAnnotations:
     prometheus.io/scrape: "true"
@@ -421,8 +431,9 @@ resource "kubernetes_deployment" "server" {
 
       spec {
         container {
-          image = "ghcr.io/nobl9/observability_demo_server:main"
-          name  = "server"
+          image             = "ghcr.io/nobl9/observability_demo_server:main"
+          name              = "server"
+          image_pull_policy = "Always"
 
           resources {
             limits = {
