@@ -355,7 +355,7 @@ resource "kubernetes_deployment" "load" {
   }
 
   spec {
-    replicas = 3
+    replicas = 10
 
     selector {
       match_labels = {
@@ -414,7 +414,7 @@ resource "kubernetes_deployment" "server" {
   }
 
   spec {
-    replicas = 3
+    replicas = 1
 
     selector {
       match_labels = {
@@ -438,11 +438,11 @@ resource "kubernetes_deployment" "server" {
           resources {
             limits = {
               cpu    = "0.5"
-              memory = "512Mi"
+              memory = "1Gi"
             }
             requests = {
               cpu    = "250m"
-              memory = "50Mi"
+              memory = "1Gi"
             }
           }
 
