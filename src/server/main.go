@@ -104,37 +104,37 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/good",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "good"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, goodHandler),
 		),
 	)
 	mux.Handle("/ok",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "ok"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, okHandler),
 		),
 	)
 	mux.Handle("/acceptable",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "acceptable"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, acceptableHandler),
 		),
 	)
 	mux.Handle("/veryslow",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "veryslow"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, verySlowHandler),
 		),
 	)
 	mux.Handle("/err",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "err"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, errorHandler),
 		),
 	)
 	mux.Handle("/bad",
 		promhttp.InstrumentHandlerDuration(
-			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "bad"}),
+			httpRequestDuration.MustCurryWith(prometheus.Labels{"handler": "found"}),
 			promhttp.InstrumentHandlerCounter(httpRequestsTotal, badHandler),
 		),
 	)

@@ -11,7 +11,7 @@ class StandardUser(HttpUser):
     def ok(self):
         self.client.get("/ok")
 
-    @task(3)
+    @task(2)
     def bad(self):
         self.client.get("/bad")
 
@@ -23,7 +23,7 @@ class StandardUser(HttpUser):
     def veryslow(self):
         self.client.get("/veryslow")
 
-    @task(5)
+    @task(2)
     def unpredictable(self):
         self.client.get("/err")
 
