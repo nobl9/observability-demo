@@ -300,6 +300,55 @@ extraScrapeConfigs: |
     static_configs:
       - targets:
         - ${local.name}-server.${var.k8s_namespace}-server.svc.cluster.local:8080
+kubernetes_sd_configs:
+  - role: endpoints
+    namespaces:
+      names:
+      - ${var.k8s_namespace}-server
+
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_app]
+    separator: ;
+    regex: Server
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+    regex: true
+    action: keep
+  - source_labels: [__meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: https
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_namespace]
+    separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: (.*)
+    target_label: service
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: (.*)
+    target_label: job
+    replacement: ${1}
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: endpoint
+    replacement: https
+    action: replace
 EOT
   ]
 }
@@ -412,13 +461,12 @@ resource "kubernetes_deployment" "server" {
       app = "Server"
     }
     annotations = {
-      "prometheus.io/port"   = "8080",
       "prometheus.io/scrape" = "true"
     }
   }
 
   spec {
-    replicas = 1
+    replicas = 3
 
     selector {
       match_labels = {
