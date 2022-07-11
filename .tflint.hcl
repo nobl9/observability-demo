@@ -49,14 +49,3 @@ rule "terraform_standard_module_structure" {
   enabled = true
 }
 
-# Default tags from context.tf
-rule "aws_resource_missing_tags" {
-  enabled = true
-  tags = [
-    "Name",
-    "Stage",
-    "Environment",
-    "Stage",
-  ]
-}
-
