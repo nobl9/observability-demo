@@ -22,11 +22,11 @@ Please to do not use this in a production deployment*
 To create the resources, take a look at the example in
 `./examples/complete`. From the example directory, you can run
 `terraform apply` or add the module to your own project. Refer to the
-[documenation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+[documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 for more information on configuring the AWS provider.
 
 Once the resources are created, follow the
-[documenation](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html)
+[documentation](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html)
 on creating a kubeconfig file in order to connect to the cluster. Once that
 is created, you can connect to the Prometheus server by forwarding the port
 to your local, ex:
@@ -57,13 +57,9 @@ Log in with `admin` and the password from the previous step.
 Once you are done, you can call `terraform destroy` to clean up all created
 resources.
 
-#### Prometheus Metrics
+### Prometheus Metrics
 
 By default, the custom application exposes four metrics:
-- `http_requests_total`
-- `http_request_duration_seconds_sum`
-- `http_request_duration_seconds_count`
-- `http_request_duration_seconds_bucket`
 
 ## Requirements
 
@@ -81,11 +77,11 @@ The following requirements are needed by this module:
 
 The following providers are used by this module:
 
-- <a name="provider_aws"></a> [aws](#provider\_aws) (4.21.0)
+- <a name="provider_aws"></a> [aws](#provider\_aws) (>= 4.21.0)
 
-- <a name="provider_helm"></a> [helm](#provider\_helm) (2.6.0)
+- <a name="provider_helm"></a> [helm](#provider\_helm) (>= 2.6.0)
 
-- <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) (2.12.1)
+- <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) (>= 2.12.1)
 
 ## Modules
 
