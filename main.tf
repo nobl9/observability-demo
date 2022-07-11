@@ -355,7 +355,7 @@ resource "kubernetes_deployment" "load" {
   }
 
   spec {
-    replicas = 10
+    replicas = 5
 
     selector {
       match_labels = {
@@ -410,6 +410,10 @@ resource "kubernetes_deployment" "server" {
     namespace = "${var.k8s_namespace}-server"
     labels = {
       app = "Server"
+    }
+    annotations = {
+      "prometheus.io/port"   = "8080",
+      "prometheus.io/scrape" = "true"
     }
   }
 
