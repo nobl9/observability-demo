@@ -78,7 +78,10 @@ func main() {
 
 		if rand.Intn(100) > 10 {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Hello from example application."))
+			_, err := w.Write([]byte("Hello from example application."))
+			if err != nil {
+				log.Printf("Write failed: %v", err)
+			}
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
