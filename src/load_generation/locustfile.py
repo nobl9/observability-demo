@@ -3,6 +3,8 @@ from locust import HttpUser, task, between
 from locust import LoadTestShape
 
 class StandardUser(HttpUser):
+    wait_time = between(0.5,2)
+
     @task(5)
     def good(self):
         self.client.get("/good")
@@ -11,11 +13,11 @@ class StandardUser(HttpUser):
     def ok(self):
         self.client.get("/ok")
 
-    @task(2)
+    @task(3)
     def bad(self):
         self.client.get("/bad")
 
-    @task(2)
+    @task(4)
     def acceptable(self):
         self.client.get("/acceptable")
 
@@ -23,11 +25,11 @@ class StandardUser(HttpUser):
     def veryslow(self):
         self.client.get("/veryslow")
 
-    @task(2)
+    @task(3)
     def unpredictable(self):
         self.client.get("/err")
 
-    @task(5)
+    @task(2)
     def not_found(self):
         self.client.get("/notfound")
 
@@ -43,9 +45,9 @@ class DoubleWave(LoadTestShape):
         time_limit -- total length of test
     """
 
-    min_users = 100
-    peak_one_users = 1000
-    peak_two_users = 1500
+    min_users = 500
+    peak_one_users = 2000
+    peak_two_users = 1000
     time_limit = 600
 
     def tick(self):
