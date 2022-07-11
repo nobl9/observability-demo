@@ -98,7 +98,7 @@ func main() {
 	badHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		delay := getDelay(500, 2000)
 		time.Sleep(delay)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusInternalServerError)
 	})
 
 	mux := http.NewServeMux()
