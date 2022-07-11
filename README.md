@@ -16,6 +16,9 @@ This module requires the [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/use
 
 ## Usage
 
+**NOTE** *This is a demo, and meant to be used in development and testing.
+Please to do not use this in a production deployment*
+
 To create the resources, take a look at the example in
 `./examples/complete`. From the example directory, you can run
 `terraform apply` or add the module to your own project. Refer to the
