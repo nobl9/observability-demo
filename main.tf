@@ -192,9 +192,9 @@ module "vpc" {
   cidr = local.cidr_block
 
   azs             = ["${var.region}a", "${var.region}b", "${var.region}c"]
-  private_subnets = local.cidr_blocks.0
-  public_subnets  = local.cidr_blocks.1
-  intra_subnets   = local.cidr_blocks.2
+  private_subnets = local.cidr_blocks[0]
+  public_subnets  = local.cidr_blocks[1]
+  intra_subnets   = local.cidr_blocks[2]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -508,11 +508,11 @@ resource "kubernetes_deployment" "server" {
 resource "kubernetes_service" "server" {
   metadata {
     name      = "${local.name}-server"
-    namespace = kubernetes_deployment.server.metadata.0.namespace
+    namespace = kubernetes_deployment.server.metadata[0].namespace
   }
   spec {
     selector = {
-      app = kubernetes_deployment.server.metadata.0.labels.app
+      app = kubernetes_deployment.server.metadata[0].labels.app
     }
     port {
       port        = 8080
